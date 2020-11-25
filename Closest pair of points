@@ -1,0 +1,105 @@
+
+import sys
+import math
+from operator import itemgetter
+R = 6371e3
+def dist(a, b):
+	lat1=a[1]
+	lat2=b[1]
+	lon1=a[2]
+	lon2=b[2]
+	phi1 = lat1 * math.pi / 180
+	phi2 = lat2 * math.pi / 180
+	delta_phi = (lat2 - lat1) * math.pi / 180
+	delta_lambda = (lon2 - lon1) * math.pi / 180
+	a = math.sin(delta_phi / 2) **2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) **2
+	c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+	d = R * c / 1000  # transform into km
+	return round(d,1)
+
+def bruteforce(ax):
+	mini = dist(ax[0],ax[1])
+	p1=ax[0]
+	p2=ax[1]
+	lena=len(ax)
+	for i in range(lena-1):
+		for j in range(i + 1, lena):
+			if i !=0 and j !=1:
+				d=dist(ax[i],ax[j])
+				if d<mini:
+					mini=d
+					p1,p2=ax[i],ax[j]
+
+	return p1,p2,mini
+
+def closest_split_pair(px,py,delta,bestpair):
+	lenx=len(px)
+	midx=px[lenx//2][1]
+	suby=[x for x in py if math.radians(abs(midx-x[1]))*R/1000<delta]
+	best=delta
+	leny=len(suby)
+	for i in range(leny-1):
+		for j in range(i+1,min(i+7,leny)):
+			p,q=suby[i],suby[j]
+			distance=dist(p,q)
+			if distance<best:
+				bestpair=p,q
+				best=distance
+	return bestpair[0],bestpair[1],best
+
+def closestpair(ax, ay):
+	n = len(ax)
+	if n <= 3:
+		return bruteforce(ax)
+	mid = n // 2
+	Qx = ax[: mid]
+	Rx = ax[mid: ]
+	Qy=[]
+	Ry=[]
+	qx=set(Qx)
+	for x in ay:
+		if x in qx:
+			Qy.append(x)
+		else:
+			Ry.append(x)
+
+	# Call recursively both arrays after split
+	(p1, q1, mi1) = closestpair(Qx, Qy)
+	(p2, q2, mi2) = closestpair(Rx, Ry)
+	if mi1<mi2:
+		d=mi1
+		mn=(p1,q1)
+	else:
+		d=mi2
+		mn=(p2,q2)
+
+	# Call function to account for points on the boundary
+	(p3, q3, mi3) = closest_split_pair(ax, ay, d, mn)
+	if d<=mi3:
+		return mn[0],mn[1],d
+	return p3,q3,mi3
+
+text_in=sys.stdin
+pointsnum = int(text_in.readline())
+points = []
+scenario = 1
+while pointsnum != 0:
+	for i in range(pointsnum):
+		point = text_in.readline().split()
+		name = " ".join(point[:-2])
+		lat = float(point[-2])
+		lon = float(point[-1])
+		points.append((name, lat, lon))
+	Mx = sorted(points, key=lambda x: x[1])
+	My = sorted(points, key=lambda x: x[2])
+	loc1, loc2, dis = closestpair(Mx, My)
+	print("Scenario %d:" % scenario)
+	print("Closest pair: %s %s" % (min(loc1[0], loc2[0]), max(loc1[0], loc2[0])))
+	print("Distance:", dis)
+	scenario += 1
+	points=[]
+	pointsnum=int(text_in.readline())
+
+
+			
+
